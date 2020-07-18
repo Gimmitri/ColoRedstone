@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "colored_redstone:item/colored_redstone_wire_item"
+  }
+}
