@@ -1,5 +1,8 @@
 package net.fabricmc.coloredRedstone.block;
 
+import static net.minecraft.client.render.WorldRenderer.DIRECTIONS;
+
+import java.util.Iterator;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -14,6 +17,7 @@ import net.minecraft.util.DyeColor;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.world.BlockView;
+import net.minecraft.world.World;
 
 @Log4j2
 @Getter
@@ -104,7 +108,7 @@ public class ColoredRedstoneWireBlock extends RedstoneWireBlock implements DyedB
     return wireConnection;
   }
 
-  private WireConnection getWireConnectionSide(BlockView blockView, Direction direction,
+  protected WireConnection getWireConnectionSide(BlockView blockView, Direction direction,
       BlockState thisBlockState, BlockPos blockPos2, BlockState blockState2) {
     boolean connectsInDirection = connectsTo(thisBlockState, blockState2, direction);
     boolean solidBlock = blockState2.isSolidBlock(blockView, blockPos2);
@@ -113,7 +117,7 @@ public class ColoredRedstoneWireBlock extends RedstoneWireBlock implements DyedB
         : WireConnection.SIDE;
   }
 
-  private WireConnection getWireConnectionUp(BlockView blockView, Direction direction,
+  protected WireConnection getWireConnectionUp(BlockView blockView, Direction direction,
       BlockState thisBlockState, BlockPos blockPos2, BlockState blockState2) {
     boolean canRunOnTop = this.canRunOnTop(blockView, blockPos2, blockState2);
     if (canRunOnTop && connectsTo(thisBlockState, blockView.getBlockState(blockPos2.up()))) {
@@ -130,8 +134,58 @@ public class ColoredRedstoneWireBlock extends RedstoneWireBlock implements DyedB
   }
 
   @Override
-  public boolean emitsRedstonePower(BlockState state) {
-    return true;
+  protected int method_27842(World world, BlockPos blockPos) {
+    this.wiresGivePower = false;
+    int i = this.getReceivedRedstonePower(world, blockPos);
+    this.wiresGivePower = true;
+    int j = 0;
+    if (i < 15) {
+      Iterator var5 = Direction.Type.HORIZONTAL.iterator();
+
+      while (true) {
+        while (var5.hasNext()) {
+          Direction direction = (Direction) var5.next();
+          BlockPos blockPos2 = blockPos.offset(direction);
+          BlockState blockState = world.getBlockState(blockPos2);
+          j = Math.max(j, this.increasePower(blockState));
+          BlockPos blockPos3 = blockPos.up();
+          if (blockState.isSolidBlock(world, blockPos2) && !world.getBlockState(blockPos3)
+              .isSolidBlock(world, blockPos3)) {
+            j = Math.max(j, this.increasePower(world.getBlockState(blockPos2.up())));
+          } else if (!blockState.isSolidBlock(world, blockPos2)) {
+            j = Math.max(j, this.increasePower(world.getBlockState(blockPos2.down())));
+          }
+        }
+
+        return Math.max(i, j - 1);
+      }
+    } else {
+      return Math.max(i, j - 1);
+    }
+  }
+
+  protected int getReceivedRedstonePower(World world, BlockPos pos) {
+    Direction[] var3 = DIRECTIONS;
+
+    for (Direction direction : var3) {
+      BlockPos blockPos = pos.offset(direction);
+      BlockState blockState = world.getBlockState(blockPos);
+      int j = world.getEmittedRedstonePower(blockPos, direction);
+
+      if (isColoredRedstoneWireBlock(blockState)
+          && ((ColoredRedstoneWireBlock) blockState.getBlock()).getColor() != this.getColor()) {
+        j = 0;
+      } else if ((blockState.getBlock() instanceof RedstoneWireBlock)) {
+        j = 0;
+      } else if (blockState.getBlock() instanceof ColoredRedstoneBlock
+          && ((ColoredRedstoneBlock) blockState.getBlock()).getColor() != this.getColor()) {
+        j = 0;
+      }
+      if (j >= 15) {
+        return 15;
+      }
+    }
+    return 0;
   }
 
   @Override
@@ -152,5 +206,9 @@ public class ColoredRedstoneWireBlock extends RedstoneWireBlock implements DyedB
       }
     }
     return redstonePower;
+  }
+
+  private int increasePower(BlockState state) {
+    return state.isOf(this) ? (Integer) state.get(POWER) : 0;
   }
 }
