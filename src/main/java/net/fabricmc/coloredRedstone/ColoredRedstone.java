@@ -27,7 +27,7 @@ public class ColoredRedstone implements ModInitializer {
     log.info(MODID + " initialization started");
     ModBlocks.register();
     ModBlockEntities.register();
-    ModItems.registerBlockItem();
+    ModItems.register();
     ModEntities.register();
   }
 }
